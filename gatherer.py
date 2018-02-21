@@ -122,13 +122,13 @@ if __name__ == "__main__":
         description="Get your wallpaper!"
     )
 
-    argparser.add_argument("-n", "--name", default="")
-    argparser.add_argument("-e", "--expansion", default="")
-    argparser.add_argument("-s", "--size", default="2560x1600")
-    argparser.add_argument("-p", "--path", default="./")
-    argparser.add_argument("-v", "--verbose", action="store_true")
-    argparser.add_argument("-w", "--wallpaper", action="store_true")
-    argparser.add_argument("-l", "--log-file", default=None)
+    argparser.add_argument("-n", "--name", default="", help="Only get wallpapers that contains `name` in its title")
+    argparser.add_argument("-e", "--expansion", default="", help="Only get wallpapers from specific expansion")
+    argparser.add_argument("-s", "--size", default="2560x1600", help="Size of the wallpaper. Default is 2560x1600. Be prepare to not have your resolution at all :(")
+    argparser.add_argument("-p", "--path", default="./", help="Path to download wallpaper, e.g. /home/user/wallpapers/")
+    argparser.add_argument("-v", "--verbose", action="store_true", help="Be verbose")
+    argparser.add_argument("-w", "--wallpaper", action="store_true", help="Mac only. Set downloaded wallpaper as desktop picture")
+    argparser.add_argument("-l", "--log-file", default=None, help="Log file to store verbose output. Useful for cron")
 
     args = argparser.parse_args()
 
