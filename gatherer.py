@@ -5,6 +5,7 @@ import os
 import random
 import sys
 from argparse import ArgumentParser
+from subprocess import check_call
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,7 +15,7 @@ logger.addHandler(logging.NullHandler())
 
 class Wallpaper:
     def __init__(self, tag):
-        self.name = tag.find('h3').getText()
+        self.name = tag.find('h3').getText().strip()
         self.expansion = tag.find('span').getText()
         self.author = tag.find('p', class_="author").getText()[3:]
 
@@ -110,7 +111,7 @@ class Gatherer:
     def get_random_wallpaper(self, name="", expansion="", size="2560x1600"):
         self.how_many_pages(name=name, expansion=expansion)
         page = random.randrange(self.number_of_pages)
-        logger.debug("Chosen page = %d / %d" , page, self.number_of_pages)
+        logger.debug("Chosen page = %d / %d" , page + 1, self.number_of_pages)
         self.make_request(page, expansion=expansion, title=name)
         wallpaper = self.choose_random_wallpaper_by_size(size)
 
@@ -154,6 +155,11 @@ if __name__ == "__main__":
     filename = g.get_random_wallpaper(name=args.name, expansion=args.expansion, size=args.size)
 
     if args.wallpaper:
-        cmd = """osascript -e 'tell application "Finder" to set desktop picture to POSIX file "%s"'""" % os.path.abspath(filename)
+        shitty_escaper = lambda x: x.replace('\\', '\\\\').replace('"', '\\"')
+        cmd = [
+            "osascript",
+            "-e",
+            'tell application "Finder" to set desktop picture to POSIX file "%s"' % shitty_escaper(os.path.abspath(filename))
+        ]
         logger.debug(cmd)
-        os.system(cmd)
+        check_call(cmd)
