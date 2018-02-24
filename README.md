@@ -6,7 +6,7 @@ This python script allows you to download random MTG wallpaper. You can optional
 ## Usage
 ```
 usage: gatherer.py [-h] [-n NAME] [-e EXPANSION] [-s SIZE] [-p PATH] [-v] [-w]
-                   [-l LOG_FILE]
+                   [-l LOG_FILE] [-d]
 
 Get your wallpaper!
 
@@ -23,4 +23,7 @@ optional arguments:
   -w, --wallpaper       Mac only. Set downloaded wallpaper as desktop picture
   -l LOG_FILE, --log-file LOG_FILE
                         Log file to store verbose output. Useful for cron
+  -d, --download-pack   Download all wallpapers from specific expansion and/or
+                        with specific word in title (specify expansion name
+                        and title with -e / -n)
 ```
