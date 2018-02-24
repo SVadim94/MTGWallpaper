@@ -14,17 +14,19 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class Wallpaper:
-    def __init__(self, tag):
-        self.name = tag.find('h3').getText().strip()
-        self.expansion = tag.find('span').getText()
-        self.author = tag.find('p', class_="author").getText()[3:]
+    def __init__(self, html_description):
+        self.name = html_description.find('h3').getText().strip()
+        self.expansion = html_description.find('span').getText().replace('(', '').replace(')', '').strip()
+        self.author = html_description.find('p', class_="author").getText()[3:]
 
-        self.links = dict()
+        self.size_links_dict = dict()
 
-        for link in tag.find_all('a', class_=""):
-            k = link.getText()
-            v = link.attrs['download']
-            self.links[k] = v
+        for link in html_description.find_all('a', class_=""):
+            size = link.getText()
+            link = link.attrs['download']
+            self.size_links_dict[size] = link
+
+            logger.debug("Parsing wallpaper: [%s] %s %s", self.expansion, self.name, size)
 
 class Gatherer:
     """Gatherer"""
@@ -33,10 +35,10 @@ class Gatherer:
     def __init__(self, path="./"):
         self.session = requests.Session()
         self.parser = None
-        self.wallpapers = {}
+        self.size_wallpapers_dict = {}
         self.path = path
 
-    def make_request(self, page, expansion="", title="", filter_by="title", merge=True):
+    def make_request(self, page, expansion="", title="", filter_by="title", merge=False):
         if filter_by not in self.allowed_filters:
             raise Exception("Wrong filter type. Should be one of the \"%s\"" % ",".join(self.allowed_filters))
 
@@ -58,18 +60,19 @@ class Gatherer:
     def merge(self, response):
         self.parser = BeautifulSoup(response.json()["data"], 'html.parser')
 
-        for tag in self.parser.find_all('div', class_="wrap"):
-            wallpaper = Wallpaper(tag)
+        for html_description in self.parser.find_all('div', class_="wrap"):
+            wallpaper = Wallpaper(html_description)
+            logger.debug("[%s] %s was merged", wallpaper.expansion, wallpaper.name)
 
-            for size in wallpaper.links.keys():
-                s = self.wallpapers.setdefault(size, [])
+            for size in wallpaper.size_links_dict.keys():
+                s = self.size_wallpapers_dict.setdefault(size, [])
                 s.append(wallpaper)
 
     def download_wallpaper(self, wallpaper, size):
-        logger.info("Getting %s from %s" % (wallpaper.name, wallpaper.links[size]))
+        logger.info("Fetching %s from %s" % (wallpaper.name, wallpaper.size_links_dict[size]))
 
-        resp = self.session.get(wallpaper.links[size], stream=True)
-        filename = os.path.join(self.path, "%s %s.jpg" % (wallpaper.expansion, wallpaper.name))
+        resp = self.session.get(wallpaper.size_links_dict[size], stream=True)
+        filename = os.path.join(self.path, "[%s] %s.jpg" % (wallpaper.expansion, wallpaper.name))
 
         with open(filename, 'wb') as f:
             for chunk in resp.iter_content(1024 * 1024):
@@ -81,7 +84,7 @@ class Gatherer:
 
     def choose_random_wallpaper_by_size(self, size="2560x1600"):
         try:
-            wallpaper = random.choice(self.wallpapers[size])
+            wallpaper = random.choice(self.size_wallpapers_dict[size])
         except KeyError:
             raise Exception("No wallpaper of size %s" % size)
 
@@ -96,7 +99,7 @@ class Gatherer:
         while low <= high:
             logger.debug("bin_search: low = %s, high = %s", low, high)
             guess = (high + low) // 2
-            req = self.make_request(page=guess, expansion=expansion, title=name, merge=False).json()
+            req = self.make_request(page=guess, expansion=expansion, title=name).json()
 
             if req["data"] != "" and req["displaySeeMore"] == 0:
                 self.number_of_pages = req["page"]
@@ -112,7 +115,7 @@ class Gatherer:
         self.how_many_pages(name=name, expansion=expansion)
         page = random.randrange(self.number_of_pages)
         logger.debug("Chosen page = %d / %d" , page + 1, self.number_of_pages)
-        self.make_request(page, expansion=expansion, title=name)
+        self.make_request(page, expansion=expansion, title=name, merge=True)
         wallpaper = self.choose_random_wallpaper_by_size(size)
 
         return self.download_wallpaper(wallpaper, size)
@@ -138,6 +141,7 @@ if __name__ == "__main__":
         ch = logging.FileHandler(args.log_file)
     else:
         ch = logging.StreamHandler()
+
     ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     ch.setLevel(logging.DEBUG)
 
